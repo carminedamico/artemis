@@ -3,11 +3,11 @@ package main
 import (
 	"log"
 
-	"github.com/carminedamico/artemis/commands"
+	"github.com/carminedamico/artemis/cmd"
 )
 
 func main() {
-	if err := commands.RootCmd.Execute(); err != nil {
+	if err := cmd.Execute(); err != nil {
 		log.Fatal(err)
 	}
 	log.Print("Scheduling completed")
