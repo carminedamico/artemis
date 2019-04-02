@@ -11,8 +11,8 @@ type Configuration struct {
 
 // EvolutionaryAlgorithm holds the required parameters for the execution of the used evolutionary algorithm
 type EvolutionaryAlgorithm struct {
-	PopulationSize      int       `json:"PopulationSizen"`
+	PopulationSize      int       `json:"PopulationSize"`
 	NumberOfGenerations int       `json:"NumberOfGenerations"`
-	AgentsProbabilities []float32 `json:"AgentsProbabilities"`
+	MutationRate        []float32 `json:"MutationRate"`
 	MaxTime             int       `json:"MaxTime"`
 }

@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 
+	"github.com/carminedamico/artemis/config"
 	"github.com/spf13/cobra"
 )
 
@@ -15,6 +16,11 @@ var scheduleCmd = &cobra.Command{
 	Short: "Schedule the workload passed as argument",
 	Args:  cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println(args[0])
+		var tmp = config.Server{
+			8,
+			32,
+			1000,
+		}
+		fmt.Println(tmp)
 	},
 }
