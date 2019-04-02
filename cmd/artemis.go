@@ -1,8 +1,6 @@
 package cmd
 
 import (
-	"fmt"
-
 	"github.com/spf13/cobra"
 )
 
@@ -11,7 +9,7 @@ var rootCmd = &cobra.Command{
 	Short: "Artemis is a smart energy-efficient scheduler for cloud applications",
 	Long:  "",
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("EXECUTED")
+		// Print something about the usage (usage: artemis ...)
 	},
 }
 
