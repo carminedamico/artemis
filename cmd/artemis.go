@@ -6,11 +6,7 @@ import (
 
 var rootCmd = &cobra.Command{
 	Use:   "artemis",
-	Short: "Artemis is a smart energy-efficient scheduler for cloud applications",
-	Long:  "",
-	Run: func(cmd *cobra.Command, args []string) {
-		// Print something about the usage (usage: artemis ...)
-	},
+	Short: "Artemis is a smart energy-efficient scheduling simulator for cloud applications",
 }
 
 func Execute() error {
