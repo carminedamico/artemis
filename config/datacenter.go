@@ -3,9 +3,9 @@ package config
 type Server struct {
 	CPU     int `json:"CPU"`
 	RAM     int `json:"RAM"`
-	PowerDC int `json:"PowerDC"`
+	PowerDC int `json:"powerDC"`
 }
 
 type Datacenter struct {
-	Nodes []Server `json:"Nodes"`
+	Servers []Server `json:"servers"`
 }
