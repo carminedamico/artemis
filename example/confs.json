@@ -1,0 +1,12 @@
+{
+  "populationSize": 8,
+  "numberOfGenerations": 100000,
+  "mutationRate": [
+    0.12,
+    0.16,
+    0.16,
+    0.27,
+    0.25
+  ],
+  "maxTime": 300
+}

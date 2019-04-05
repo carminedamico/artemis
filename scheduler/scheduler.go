@@ -1,8 +1,6 @@
 package scheduler
 
 import (
-	"fmt"
-
 	"github.com/carminedamico/artemis/config"
 )
 
@@ -22,10 +20,11 @@ func NewScheduler(datacenter config.Datacenter, workload config.Workload) *Sched
 
 // Run method starts the scheduling process
 func (scheduler *Scheduler) Run() {
-	fmt.Println(scheduler.getPowerConsumption())
+	optimizer := NewOptimizer(scheduler)
+	optimizer.Run()
 }
 
-func (scheduler *Scheduler) getPowerConsumption() (float32) {
+func (scheduler *Scheduler) GetPowerConsumption() float32 {
 	var freeCPU = make([]int, len(scheduler.datacenter.Servers))
 
 	for _, task := range scheduler.workload.Tasks {
@@ -36,7 +35,7 @@ func (scheduler *Scheduler) getPowerConsumption() (float32) {
 
 	for index, server := range scheduler.datacenter.Servers {
 		freeCPU[index] = server.CPU - freeCPU[index]
-		powerConsumption += (server.PowerDC * (float32(1) - server.IdleConsumption)) * (float32(server.CPU - freeCPU[index]) / float32(server.CPU)) + (server.PowerDC * server.IdleConsumption)
+		powerConsumption += (server.PowerDC*(float32(1)-server.IdleConsumption))*(float32(server.CPU-freeCPU[index])/float32(server.CPU)) + (server.PowerDC * server.IdleConsumption)
 	}
 
 	return powerConsumption
