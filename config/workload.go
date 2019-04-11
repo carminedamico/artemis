@@ -1,8 +1,8 @@
 package config
 
 type Task struct {
-	CPU         int `json:"CPU"`
-	RAM         int `json:"RAM"`
+	CPU         float32 `json:"CPU"`
+	RAM         float32 `json:"RAM"`
 	AllocatedOn int `json:"allocatedOn"`
 }
 
