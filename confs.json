@@ -1,6 +1,6 @@
 {
   "populationSize": 8,
-  "numberOfGenerations": 300,
+  "numberOfGenerations": 1200,
   "mutationRate": [
     0.12,
     0.16,

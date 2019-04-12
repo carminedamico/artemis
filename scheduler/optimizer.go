@@ -2,13 +2,13 @@ package scheduler
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
+	"math/rand"
 	"os"
 	"sync"
+	"time"
 
 	"github.com/carminedamico/artemis/config"
-	"github.com/jinzhu/copier"
 )
 
 //Optimizer optimizes
@@ -39,56 +39,103 @@ func NewOptimizer(scheduler *Scheduler) *Optimizer {
 // Run starts the optimization process
 func (optimizer *Optimizer) Run() {
 	agents := make([]Scheduler, optimizer.confs.PopulationSize)
+	var bestAgent Scheduler
 	var wg sync.WaitGroup
 
 	for index := range agents {
-		agents[index] = Scheduler{}
-		copier.Copy(&agents[index], &optimizer.parent)
+		agents[index] = clone(optimizer.parent)
 	}
-	log.Println("Agents created -- START WITH GENERATIONS")
+	bestAgent = clone(optimizer.parent)
+
+	log.Println("*** Initial power consumption -> ", bestAgent.powerConsumption, "W ***")
+	log.Println("Agents created -- STARTING THE OPTIMIZATION PROCESS")
+
+	// steadyState := 0
 
 	for g := 0; g < optimizer.confs.NumberOfGenerations; g++ {
+
+		// if steadyState == int(optimizer.confs.NumberOfGenerations/optimizer.confs.PopulationSize) {
+		// 	steadyState = 0
+		// 	for index := range agents {
+		// 		agents[index] = clone(bestAgent)
+		// 	}
+		// }
+
 		wg.Add(optimizer.confs.PopulationSize)
 
 		for index := range agents {
+
 			go func(agent *Scheduler) {
 				defer wg.Done()
-				agent.TSWPMutation()
-				for index, task := range agent.workload.Tasks {
-					if task.AllocatedOn > 999 {
-						fmt.Println("Error on ", index)
-					}
+
+				rand.Seed(time.Now().UTC().UnixNano())
+
+				op := randInt(0, 5)
+
+				switch op {
+				case 0:
+					agent.TSWPMutation()
+
+				case 1:
+					agent.TFFCMutation()
+
+				case 2:
+					agent.TBFCMutation()
+
+				case 3:
+					agent.SCMutation()
+
+				case 4:
+					agent.SLRMutation()
 				}
+
+				agent.getPowerConsumptionAccountingMigration(optimizer.parent)
 			}(&agents[index])
+
 		}
 
 		wg.Wait()
 
-		for index := range agents {
-			fmt.Println("\tNEW POWER CONSUMPTION -> ", agents[index].GetPowerConsumption())
+		for _, agent := range agents {
+			if agent.powerConsumption < bestAgent.powerConsumption {
+				bestAgent = clone(agent)
+			}
 		}
 
 	}
 
-	// for g := 0; g <= optimizer.confs.NumberOfGenerations; g++ {
-	// 	wg.Add(1)
+	log.Println("New best power consumption -> ", bestAgent.powerConsumption, "W")
+}
 
-	// 	for index := range agents {
-	// 		// Apply mutation based on probability distribution
-	// 		go func(agent *Scheduler) {
-	// 			defer wg.Done()
-	// 			agent.TSWPMutation()
-	// 		}(&agents[index])
-	// 	}
+func clone(src Scheduler) Scheduler {
+	var cpy Scheduler
 
-	// 	wg.Wait()
+	cpy.datacenter.Servers = make([]config.Server, len(src.datacenter.Servers))
+	for i, server := range src.datacenter.Servers {
+		cpy.datacenter.Servers[i] = server
+	}
+	cpy.workload.Tasks = make([]config.Task, len(src.workload.Tasks))
+	for i, task := range src.workload.Tasks {
+		cpy.workload.Tasks[i] = task
+	}
 
-	// 	for index, agent := range agents {
-	// 		fmt.Printf("\tAGENT #%d POWER CONSUMPTION -> %f\n", index, agent.GetPowerConsumption())
-	// 	}
+	cpy.powerConsumption = src.powerConsumption
 
-	// 	// calculate fitness
-	// 	// check best fitness
-	// 	// update for next generation
-	// }
+	return cpy
+}
+
+func (scheduler *Scheduler) getPowerConsumptionAccountingMigration(parent Scheduler) {
+	migrationCost := float32(0)
+
+	for index := range scheduler.workload.Tasks {
+		if scheduler.workload.Tasks[index].AllocatedOn != parent.workload.Tasks[index].AllocatedOn {
+			task := parent.workload.Tasks[index]
+			server := parent.datacenter.Servers[parent.workload.Tasks[index].AllocatedOn]
+			migrationCost += ((task.CPU / server.CPU) * server.PowerDC) * float32(0.10)
+		}
+	}
+
+	scheduler.GetPowerConsumption()
+	scheduler.powerConsumption += migrationCost
+
 }
