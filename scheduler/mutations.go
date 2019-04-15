@@ -6,7 +6,8 @@ import (
 	"time"
 )
 
-// TSWPMutation performs a mutation
+// TSWPMutation randomly selects a task from the workload and searches among the others one task
+// that can be exchanged with.
 func (scheduler *Scheduler) TSWPMutation() {
 	rand.Seed(time.Now().UTC().UnixNano())
 
@@ -40,16 +41,19 @@ func (scheduler *Scheduler) TSWPMutation() {
 	}
 }
 
-// TFFCMutation performs a mutation
+// TFFCMutation randomly selects one task that can be moved on another server
 func (scheduler *Scheduler) TFFCMutation() {
 	rand.Seed(time.Now().UTC().UnixNano())
 
 	indexTaskToSwap := randInt(0, len(scheduler.workload.Tasks))
 	taskToSwap := scheduler.workload.Tasks[indexTaskToSwap]
 
-	for serverIndex := range scheduler.datacenter.Servers {
-		if serverIndex != taskToSwap.AllocatedOn {
+	startingIndex := randInt(0, len(scheduler.datacenter.Servers))
 
+	for i := range scheduler.datacenter.Servers {
+		serverIndex := (i + startingIndex) % len(scheduler.datacenter.Servers)
+
+		if serverIndex != taskToSwap.AllocatedOn {
 			toServer := scheduler.datacenter.Servers[serverIndex]
 			if (toServer.FreeCPU-taskToSwap.CPU) >= 0 && (toServer.FreeRAM-taskToSwap.RAM) >= 0 {
 				scheduler.migrateTask(indexTaskToSwap, serverIndex)
@@ -60,22 +64,24 @@ func (scheduler *Scheduler) TFFCMutation() {
 	}
 }
 
-// TBFCMutation performs a mutation
+// TBFCMutation randomly selects one task that can be moved on the best possible node,
+// that is represented by the one with the largest unused amount of resources.
 func (scheduler *Scheduler) TBFCMutation() {
 	rand.Seed(time.Now().UTC().UnixNano())
 
 	indexTaskToSwap := randInt(0, len(scheduler.workload.Tasks))
 	taskToSwap := scheduler.workload.Tasks[indexTaskToSwap]
-	
+
 	bestServerIndex := -1
 	maxFreeCPU := float32(0)
 	maxFreeRAM := float32(0)
 
-	for serverIndex := range scheduler.datacenter.Servers {
+	startingIndex := randInt(0, len(scheduler.datacenter.Servers))
+
+	for i := range scheduler.datacenter.Servers {
+		serverIndex := (i + startingIndex) % len(scheduler.datacenter.Servers)
 		if serverIndex != taskToSwap.AllocatedOn {
-
 			toServer := scheduler.datacenter.Servers[serverIndex]
-
 			if (toServer.FreeCPU-taskToSwap.CPU) >= 0 && (toServer.FreeRAM-taskToSwap.RAM) >= 0 && (toServer.FreeCPU > maxFreeCPU) && (toServer.FreeRAM >= maxFreeRAM) {
 				bestServerIndex = serverIndex
 			}
@@ -88,7 +94,8 @@ func (scheduler *Scheduler) TBFCMutation() {
 
 }
 
-// SCMutation performs a mutation
+// SCMutation randomly selects one server from the server list and tries to saturate its
+// available resources, moving tasks to it.
 func (scheduler *Scheduler) SCMutation() {
 	rand.Seed(time.Now().UTC().UnixNano())
 
@@ -110,13 +117,19 @@ func (scheduler *Scheduler) SCMutation() {
 
 }
 
-// SLRMutation performs a mutation
+// SLRMutation randomly selects one server from the server list and tries to redistribute
+// its whole load on other servers.
 func (scheduler *Scheduler) SLRMutation() {
 	rand.Seed(time.Now().UTC().UnixNano())
 
 	indexServerToEmpty := randInt(0, len(scheduler.datacenter.Servers))
 
-	for indexTask, task := range scheduler.workload.Tasks {
+	startingIndex := randInt(0, len(scheduler.workload.Tasks))
+
+	for i := range scheduler.workload.Tasks {
+		indexTask := (i + startingIndex) % len(scheduler.workload.Tasks)
+		task := scheduler.workload.Tasks[indexTask]
+
 		if task.AllocatedOn == indexServerToEmpty {
 			for indexServer, server := range scheduler.datacenter.Servers {
 				if server.FreeCPU >= task.CPU && server.FreeRAM >= task.RAM {

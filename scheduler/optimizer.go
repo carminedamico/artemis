@@ -43,23 +43,37 @@ func (optimizer *Optimizer) Run() {
 	var wg sync.WaitGroup
 
 	for index := range agents {
-		agents[index] = clone(optimizer.parent)
+		if index%2 == 0 {
+			agents[index].datacenter.Servers = make([]config.Server, len(optimizer.parent.datacenter.Servers))
+			agents[index].workload.Tasks = make([]config.Task, len(optimizer.parent.workload.Tasks))
+
+			for agents[index].randomizer() == false {
+			}
+		} else {
+			agents[index] = clone(optimizer.parent)
+		}
 	}
+
 	bestAgent = clone(optimizer.parent)
 
 	log.Println("*** Initial power consumption -> ", bestAgent.powerConsumption, "W ***")
 	log.Println("Agents created -- STARTING THE OPTIMIZATION PROCESS")
 
-	// steadyState := 0
+	steadyState := 0
 
 	for g := 0; g < optimizer.confs.NumberOfGenerations; g++ {
 
-		// if steadyState == int(optimizer.confs.NumberOfGenerations/optimizer.confs.PopulationSize) {
-		// 	steadyState = 0
-		// 	for index := range agents {
-		// 		agents[index] = clone(bestAgent)
-		// 	}
-		// }
+		if steadyState == int(optimizer.confs.NumberOfGenerations/optimizer.confs.PopulationSize) {
+			steadyState = 0
+			for index := range agents {
+				if index%2 == 0 {
+					for agents[index].randomizer() == false {
+					}
+				} else {
+					agents[index] = clone(bestAgent)
+				}
+			}
+		}
 
 		wg.Add(optimizer.confs.PopulationSize)
 
@@ -96,10 +110,19 @@ func (optimizer *Optimizer) Run() {
 
 		wg.Wait()
 
+		foundBetter := false
+
 		for _, agent := range agents {
 			if agent.powerConsumption < bestAgent.powerConsumption {
 				bestAgent = clone(agent)
+				foundBetter = true
 			}
+		}
+
+		if foundBetter {
+			steadyState = 0
+		} else {
+			steadyState++
 		}
 
 	}
@@ -137,5 +160,45 @@ func (scheduler *Scheduler) getPowerConsumptionAccountingMigration(parent Schedu
 
 	scheduler.GetPowerConsumption()
 	scheduler.powerConsumption += migrationCost
+}
 
+func (scheduler *Scheduler) randomizer() bool {
+	rand.Seed(time.Now().UTC().UnixNano())
+
+	for index := range scheduler.workload.Tasks {
+		scheduler.workload.Tasks[index].AllocatedOn = -1
+	}
+
+	for index := range scheduler.datacenter.Servers {
+		scheduler.datacenter.Servers[index].FreeCPU = scheduler.datacenter.Servers[index].CPU
+		scheduler.datacenter.Servers[index].FreeRAM = scheduler.datacenter.Servers[index].RAM
+	}
+
+	rndTaskIndex := randInt(0, len(scheduler.workload.Tasks))
+
+	rndServerIndex := randInt(0, len(scheduler.datacenter.Servers))
+
+	for t := 0; t < len(scheduler.workload.Tasks); t++ {
+		indexTask := (t + rndTaskIndex) % len(scheduler.workload.Tasks)
+
+		allocated := false
+
+		for s := 0; s < len(scheduler.datacenter.Servers); s++ {
+			indexServer := (s + rndServerIndex) % len(scheduler.datacenter.Servers)
+
+			task := scheduler.workload.Tasks[indexTask]
+			server := scheduler.datacenter.Servers[indexServer]
+
+			if (server.FreeCPU-task.CPU) >= 0 && (server.FreeRAM-task.RAM) >= 0 {
+				scheduler.addTaskToServer(indexTask, indexServer)
+				allocated = true
+			}
+
+		}
+		if !allocated {
+			return false
+		}
+	}
+
+	return true
 }
