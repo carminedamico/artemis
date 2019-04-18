@@ -34,7 +34,9 @@ func (scheduler *Scheduler) GetPowerConsumption() {
 	powerConsumption := float32(0)
 
 	for _, server := range scheduler.datacenter.Servers {
-		powerConsumption += (server.PowerDC*(float32(1)-server.IdleConsumption))*(float32(server.CPU-server.FreeCPU)/float32(server.CPU)) + (server.PowerDC * server.IdleConsumption)
+		if server.CPU != server.FreeCPU {
+			powerConsumption += (server.PowerDC*(float32(1)-server.IdleConsumption))*(float32(server.CPU-server.FreeCPU)/float32(server.CPU)) + (server.PowerDC * server.IdleConsumption)
+		}
 	}
 
 	scheduler.powerConsumption = powerConsumption
@@ -51,4 +53,21 @@ func (scheduler *Scheduler) getDeltas() {
 		scheduler.datacenter.Servers[task.AllocatedOn].FreeCPU -= task.CPU
 		scheduler.datacenter.Servers[task.AllocatedOn].FreeRAM -= task.RAM
 	}
+}
+
+func clone(src Scheduler) Scheduler {
+	var cpy Scheduler
+
+	cpy.datacenter.Servers = make([]config.Server, len(src.datacenter.Servers))
+	for i, server := range src.datacenter.Servers {
+		cpy.datacenter.Servers[i] = server
+	}
+	cpy.workload.Tasks = make([]config.Task, len(src.workload.Tasks))
+	for i, task := range src.workload.Tasks {
+		cpy.workload.Tasks[i] = task
+	}
+
+	cpy.powerConsumption = src.powerConsumption
+
+	return cpy
 }

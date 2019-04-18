@@ -3,10 +3,9 @@ package scheduler
 import (
 	"encoding/json"
 	"log"
-	"math/rand"
 	"os"
+	"sort"
 	"sync"
-	"time"
 
 	"github.com/carminedamico/artemis/config"
 )
@@ -38,74 +37,63 @@ func NewOptimizer(scheduler *Scheduler) *Optimizer {
 
 // Run starts the optimization process
 func (optimizer *Optimizer) Run() {
-	agents := make([]Scheduler, optimizer.confs.PopulationSize)
-	var bestAgent Scheduler
+
+	agents := make([]Agent, optimizer.confs.PopulationSize)
+
+	var bestScheduler Scheduler
 	var wg sync.WaitGroup
 
 	for index := range agents {
-		if index%2 == 0 {
-			agents[index].datacenter.Servers = make([]config.Server, len(optimizer.parent.datacenter.Servers))
-			agents[index].workload.Tasks = make([]config.Task, len(optimizer.parent.workload.Tasks))
-
-			for agents[index].randomizer() == false {
-			}
-		} else {
-			agents[index] = clone(optimizer.parent)
-		}
+		agents[index] = *newRandomAgent(optimizer.parent)
 	}
+	sort.Slice(agents, func(i, j int) bool {
+		return agents[i].scheduler.powerConsumption < agents[j].scheduler.powerConsumption
+	})
 
-	bestAgent = clone(optimizer.parent)
+	bestScheduler = clone(agents[0].scheduler)
+	steadyState := 0
 
-	log.Println("*** Initial power consumption -> ", bestAgent.powerConsumption, "W ***")
 	log.Println("Agents created -- STARTING THE OPTIMIZATION PROCESS")
 
-	steadyState := 0
+	f, err := os.OpenFile(optimizer.confs.LogFile, os.O_RDWR|os.O_CREATE, 0666)
+	if err != nil {
+		log.Fatalf("error opening file: %v", err)
+	}
+	defer f.Close()
+
+	log.SetOutput(f)
 
 	for g := 0; g < optimizer.confs.NumberOfGenerations; g++ {
 
-		if steadyState == int(optimizer.confs.NumberOfGenerations/optimizer.confs.PopulationSize) {
-			steadyState = 0
+		log.Println(g, " -- ", bestScheduler.powerConsumption)
+
+		if steadyState >= 30 && g > 0 {
+			log.Println("RESTART")
 			for index := range agents {
-				if index%2 == 0 {
-					for agents[index].randomizer() == false {
-					}
-				} else {
-					agents[index] = clone(bestAgent)
-				}
+				agents[index].scheduler.randomizer()
 			}
+			steadyState = 0
 		}
+
+		sort.Slice(agents, func(i, j int) bool {
+			return agents[i].scheduler.powerConsumption < agents[j].scheduler.powerConsumption
+		})
+
+		agents[3].scheduler = clone(agents[0].scheduler)
+		agents[4].scheduler = clone(agents[0].scheduler)
+		agents[5].scheduler = clone(agents[1].scheduler)
+		agents[6].scheduler.randomizer()
+		agents[6].scheduler.getPowerConsumptionAccountingMigration(optimizer.parent)
+		agents[7].scheduler.randomizer()
+		agents[7].scheduler.getPowerConsumptionAccountingMigration(optimizer.parent)
 
 		wg.Add(optimizer.confs.PopulationSize)
 
 		for index := range agents {
-
-			go func(agent *Scheduler) {
+			go func(agent *Agent) {
 				defer wg.Done()
-
-				rand.Seed(time.Now().UTC().UnixNano())
-
-				op := randInt(0, 5)
-
-				switch op {
-				case 0:
-					agent.TSWPMutation()
-
-				case 1:
-					agent.TFFCMutation()
-
-				case 2:
-					agent.TBFCMutation()
-
-				case 3:
-					agent.SCMutation()
-
-				case 4:
-					agent.SLRMutation()
-				}
-
-				agent.getPowerConsumptionAccountingMigration(optimizer.parent)
+				agent.Run(optimizer.parent)
 			}(&agents[index])
-
 		}
 
 		wg.Wait()
@@ -113,8 +101,8 @@ func (optimizer *Optimizer) Run() {
 		foundBetter := false
 
 		for _, agent := range agents {
-			if agent.powerConsumption < bestAgent.powerConsumption {
-				bestAgent = clone(agent)
+			if agent.scheduler.powerConsumption < bestScheduler.powerConsumption {
+				bestScheduler = clone(agent.scheduler)
 				foundBetter = true
 			}
 		}
@@ -127,24 +115,8 @@ func (optimizer *Optimizer) Run() {
 
 	}
 
-	log.Println("New best power consumption -> ", bestAgent.powerConsumption, "W")
-}
+	log.Println("New best power consumption -> ", bestScheduler.powerConsumption, "W")
 
-func clone(src Scheduler) Scheduler {
-	var cpy Scheduler
-
-	cpy.datacenter.Servers = make([]config.Server, len(src.datacenter.Servers))
-	for i, server := range src.datacenter.Servers {
-		cpy.datacenter.Servers[i] = server
-	}
-	cpy.workload.Tasks = make([]config.Task, len(src.workload.Tasks))
-	for i, task := range src.workload.Tasks {
-		cpy.workload.Tasks[i] = task
-	}
-
-	cpy.powerConsumption = src.powerConsumption
-
-	return cpy
 }
 
 func (scheduler *Scheduler) getPowerConsumptionAccountingMigration(parent Scheduler) {
@@ -160,45 +132,4 @@ func (scheduler *Scheduler) getPowerConsumptionAccountingMigration(parent Schedu
 
 	scheduler.GetPowerConsumption()
 	scheduler.powerConsumption += migrationCost
-}
-
-func (scheduler *Scheduler) randomizer() bool {
-	rand.Seed(time.Now().UTC().UnixNano())
-
-	for index := range scheduler.workload.Tasks {
-		scheduler.workload.Tasks[index].AllocatedOn = -1
-	}
-
-	for index := range scheduler.datacenter.Servers {
-		scheduler.datacenter.Servers[index].FreeCPU = scheduler.datacenter.Servers[index].CPU
-		scheduler.datacenter.Servers[index].FreeRAM = scheduler.datacenter.Servers[index].RAM
-	}
-
-	rndTaskIndex := randInt(0, len(scheduler.workload.Tasks))
-
-	rndServerIndex := randInt(0, len(scheduler.datacenter.Servers))
-
-	for t := 0; t < len(scheduler.workload.Tasks); t++ {
-		indexTask := (t + rndTaskIndex) % len(scheduler.workload.Tasks)
-
-		allocated := false
-
-		for s := 0; s < len(scheduler.datacenter.Servers); s++ {
-			indexServer := (s + rndServerIndex) % len(scheduler.datacenter.Servers)
-
-			task := scheduler.workload.Tasks[indexTask]
-			server := scheduler.datacenter.Servers[indexServer]
-
-			if (server.FreeCPU-task.CPU) >= 0 && (server.FreeRAM-task.RAM) >= 0 {
-				scheduler.addTaskToServer(indexTask, indexServer)
-				allocated = true
-			}
-
-		}
-		if !allocated {
-			return false
-		}
-	}
-
-	return true
 }

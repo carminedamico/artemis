@@ -1,0 +1,116 @@
+{
+  "servers": [
+    {
+      "CPU": 20,
+      "RAM": 256,
+      "powerDC": 410.0,
+      "idleConsumption": 0.65,
+      "capping": 0.72
+    },
+    {
+      "CPU": 18,
+      "RAM": 128,
+      "powerDC": 380.0,
+      "idleConsumption": 0.65,
+      "capping": 0.72
+    },
+    {
+      "CPU": 18,
+      "RAM": 64,
+      "powerDC": 350.0,
+      "idleConsumption": 0.65,
+      "capping": 0.72
+    },
+    {
+      "CPU": 16,
+      "RAM": 128,
+      "powerDC": 300.0,
+      "idleConsumption": 0.65,
+      "capping": 0.72
+    },
+    {
+      "CPU": 16,
+      "RAM": 32,
+      "powerDC": 300.0,
+      "idleConsumption": 0.65,
+      "capping": 0.72
+    },
+    {
+      "CPU": 14,
+      "RAM": 64,
+      "powerDC": 280.0,
+      "idleConsumption": 0.65,
+      "capping": 0.72
+    },
+    {
+      "CPU": 14,
+      "RAM": 32,
+      "powerDC": 250.0,
+      "idleConsumption": 0.65,
+      "capping": 0.72
+    },
+    {
+      "CPU": 12,
+      "RAM": 64,
+      "powerDC": 250.0,
+      "idleConsumption": 0.65,
+      "capping": 0.72
+    },
+    {
+      "CPU": 10,
+      "RAM": 128,
+      "powerDC": 200.0,
+      "idleConsumption": 0.65,
+      "capping": 0.72
+    },
+    {
+      "CPU": 10,
+      "RAM": 32,
+      "powerDC": 180.0,
+      "idleConsumption": 0.65,
+      "capping": 0.72
+    },
+    {
+      "CPU": 8,
+      "RAM": 256,
+      "powerDC": 450.0,
+      "idleConsumption": 0.65,
+      "capping": 0.72
+    },
+    {
+      "CPU": 8,
+      "RAM": 16,
+      "powerDC": 450.0,
+      "idleConsumption": 0.65,
+      "capping": 0.72
+    },
+    {
+      "CPU": 4,
+      "RAM": 8,
+      "powerDC": 500.0,
+      "idleConsumption": 0.65,
+      "capping": 0.72
+    },
+    {
+      "CPU": 4,
+      "RAM": 8,
+      "powerDC": 30.0,
+      "idleConsumption": 0.65,
+      "capping": 0.72
+    },
+    {
+      "CPU": 2,
+      "RAM": 8,
+      "powerDC": 225.0,
+      "idleConsumption": 0.65,
+      "capping": 0.72
+    },
+    {
+      "CPU": 20,
+      "RAM": 256,
+      "powerDC": 410.0,
+      "idleConsumption": 0.65,
+      "capping": 0.72
+    }
+  ]
+}

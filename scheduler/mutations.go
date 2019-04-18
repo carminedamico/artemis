@@ -2,6 +2,7 @@ package scheduler
 
 import (
 	"fmt"
+	"math"
 	"math/rand"
 	"time"
 )
@@ -29,7 +30,12 @@ func (scheduler *Scheduler) TSWPMutation() {
 
 		if index != indexTaskToSwap && indexFromServer != indexToServer {
 
-			if (toServer.FreeCPU-taskToSwap.CPU+targetTask.CPU) >= 0 && (fromServer.FreeCPU-targetTask.CPU+taskToSwap.CPU) >= 0 && (toServer.FreeRAM-taskToSwap.RAM+targetTask.RAM) >= 0 && (fromServer.FreeRAM-targetTask.RAM+taskToSwap.RAM) >= 0 {
+			firstServerCPUok := (fromServer.FreeCPU - targetTask.CPU + taskToSwap.CPU) >= 0
+			firstServerRAMok := (fromServer.FreeRAM - targetTask.RAM + taskToSwap.RAM) >= 0
+			secondServerCPUok := (toServer.FreeCPU - taskToSwap.CPU + targetTask.CPU) >= 0
+			secondServerRAMok := (toServer.FreeRAM - taskToSwap.RAM + targetTask.CPU) >= 0
+
+			if firstServerCPUok && firstServerRAMok && secondServerCPUok && secondServerRAMok {
 
 				scheduler.migrateTask(indexTaskToSwap, indexToServer)
 				scheduler.migrateTask(index, indexFromServer)
@@ -55,7 +61,7 @@ func (scheduler *Scheduler) TFFCMutation() {
 
 		if serverIndex != taskToSwap.AllocatedOn {
 			toServer := scheduler.datacenter.Servers[serverIndex]
-			if (toServer.FreeCPU-taskToSwap.CPU) >= 0 && (toServer.FreeRAM-taskToSwap.RAM) >= 0 {
+			if toServer.FreeCPU >= taskToSwap.CPU && toServer.FreeRAM >= taskToSwap.RAM {
 				scheduler.migrateTask(indexTaskToSwap, serverIndex)
 
 				break
@@ -82,7 +88,7 @@ func (scheduler *Scheduler) TBFCMutation() {
 		serverIndex := (i + startingIndex) % len(scheduler.datacenter.Servers)
 		if serverIndex != taskToSwap.AllocatedOn {
 			toServer := scheduler.datacenter.Servers[serverIndex]
-			if (toServer.FreeCPU-taskToSwap.CPU) >= 0 && (toServer.FreeRAM-taskToSwap.RAM) >= 0 && (toServer.FreeCPU > maxFreeCPU) && (toServer.FreeRAM >= maxFreeRAM) {
+			if toServer.FreeCPU >= taskToSwap.CPU && toServer.FreeRAM >= taskToSwap.RAM && toServer.FreeCPU > maxFreeCPU && toServer.FreeRAM >= maxFreeRAM {
 				bestServerIndex = serverIndex
 			}
 		}
@@ -100,19 +106,20 @@ func (scheduler *Scheduler) SCMutation() {
 	rand.Seed(time.Now().UTC().UnixNano())
 
 	indexServerToConsolidate := randInt(0, len(scheduler.datacenter.Servers))
-	serverToConsolidate := scheduler.datacenter.Servers[indexServerToConsolidate]
+	
 
 	startingIndex := randInt(0, len(scheduler.workload.Tasks))
 
-	for i, task := range scheduler.workload.Tasks {
+	for i := range scheduler.workload.Tasks {
 		taskIndex := (i + startingIndex) % len(scheduler.workload.Tasks)
 
-		if task.AllocatedOn != indexServerToConsolidate {
-			if (serverToConsolidate.FreeCPU-task.CPU) >= 0 && (serverToConsolidate.FreeRAM-task.RAM) >= 0 {
+		task := scheduler.workload.Tasks[taskIndex]
+		serverToConsolidate := scheduler.datacenter.Servers[indexServerToConsolidate]
 
-				scheduler.migrateTask(taskIndex, indexServerToConsolidate)
-			}
+		if task.AllocatedOn != indexServerToConsolidate && serverToConsolidate.FreeCPU >= task.CPU && serverToConsolidate.FreeRAM >= task.RAM {
+			scheduler.migrateTask(taskIndex, indexServerToConsolidate)
 		}
+
 	}
 
 }
@@ -139,13 +146,40 @@ func (scheduler *Scheduler) SLRMutation() {
 			}
 		}
 	}
+}
 
+func (scheduler *Scheduler) greedyMove(taskIndex int) {
+	rand.Seed(time.Now().UTC().UnixNano())
+
+	task := scheduler.workload.Tasks[taskIndex]
+
+	startingIndex := randInt(0, len(scheduler.datacenter.Servers))
+
+	bestServer := -1
+	bestAttractiveness := float32(math.MaxFloat32)
+
+	for i := range scheduler.datacenter.Servers {
+		serverIndex := (i + startingIndex) % len(scheduler.datacenter.Servers)
+		server := scheduler.datacenter.Servers[serverIndex]
+
+		if server.FreeCPU >= task.CPU && server.FreeRAM >= task.RAM {
+			serverPowerConsumption := (server.PowerDC*(float32(1)-server.IdleConsumption))*((server.CPU-server.FreeCPU-task.CPU)/server.CPU) + (server.PowerDC * server.IdleConsumption)
+			if serverPowerConsumption < bestAttractiveness {
+				bestServer = serverIndex
+				bestAttractiveness = serverPowerConsumption
+			}
+		}
+
+	}
+
+	scheduler.addTaskToServer(taskIndex, bestServer)
 }
 
 func (scheduler *Scheduler) migrateTask(targetTask int, targetServer int) {
 	scheduler.removeTaskFromServer(targetTask)
 
 	scheduler.addTaskToServer(targetTask, targetServer)
+
 }
 
 func (scheduler *Scheduler) removeTaskFromServer(targetTask int) {
