@@ -18,9 +18,8 @@ clean:
 	$(GOCLEAN)
 	rm -f $(BINARY_NAME)
 run:
-	$(GOBUILD) -o $(BINARY_NAME) -v ./...
-	./$(BINARY_NAME)
+	$(GOBUILD) -o $(BINARY_NAME) -v
+	./$(BINARY_NAME) schedule -d example/datacenter.json -w example/workload.json
 deps:
 	$(GOGET) github.com/spf13/cobra
-	$(GOGET) github.com/jinzhu/copier    
     
