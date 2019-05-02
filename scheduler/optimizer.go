@@ -43,9 +43,18 @@ func (optimizer *Optimizer) Run() {
 	var bestScheduler Scheduler
 	var wg sync.WaitGroup
 
+	f, err := os.OpenFile(optimizer.confs.LogFile, os.O_RDWR|os.O_CREATE, 0666)
+	if err != nil {
+		log.Fatalf("error opening file: %v", err)
+	}
+	defer f.Close()
+
+	log.SetOutput(f)
+
 	for index := range agents {
 		agents[index] = *newRandomAgent(optimizer.parent)
 	}
+
 	sort.Slice(agents, func(i, j int) bool {
 		return agents[i].scheduler.powerConsumption < agents[j].scheduler.powerConsumption
 	})
@@ -54,14 +63,6 @@ func (optimizer *Optimizer) Run() {
 	steadyState := 0
 
 	log.Println("Agents created -- STARTING THE OPTIMIZATION PROCESS")
-
-	f, err := os.OpenFile(optimizer.confs.LogFile, os.O_RDWR|os.O_CREATE, 0666)
-	if err != nil {
-		log.Fatalf("error opening file: %v", err)
-	}
-	defer f.Close()
-
-	log.SetOutput(f)
 
 	for g := 0; g < optimizer.confs.NumberOfGenerations; g++ {
 

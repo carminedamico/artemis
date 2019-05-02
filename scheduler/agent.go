@@ -5,6 +5,7 @@ import (
 	"time"
 )
 
+// Agent represents an individual belonging to the population of an optimization algorithm
 type Agent struct {
 	scheduler Scheduler
 	tabuList  TabuList
@@ -24,55 +25,56 @@ func newRandomAgent(parent Scheduler) *Agent {
 	return agent
 }
 
+// Run method allows an agent to start its optimization process, performing mutations based on the status of its tabu list
 func (agent *Agent) Run(scheduler Scheduler) {
 	op := agent.tabuList.get(5)
 
-				switch op {
-				case 0:
-					oldPowerConsumption := agent.scheduler.powerConsumption
-					agent.scheduler.TSWPMutation()
-					agent.scheduler.getPowerConsumptionAccountingMigration(scheduler)
-					newPowerConsumption := agent.scheduler.powerConsumption
-					if newPowerConsumption > oldPowerConsumption {
-						agent.tabuList.update(op)
-					}
+	switch op {
+	case 0:
+		oldPowerConsumption := agent.scheduler.powerConsumption
+		agent.scheduler.TSWPMutation()
+		agent.scheduler.getPowerConsumptionAccountingMigration(scheduler)
+		newPowerConsumption := agent.scheduler.powerConsumption
+		if newPowerConsumption > oldPowerConsumption {
+			agent.tabuList.update(op)
+		}
 
-				case 1:
-					oldPowerConsumption := agent.scheduler.powerConsumption
-					agent.scheduler.TFFCMutation()
-					agent.scheduler.getPowerConsumptionAccountingMigration(scheduler)
-					newPowerConsumption := agent.scheduler.powerConsumption
-					if newPowerConsumption > oldPowerConsumption {
-						agent.tabuList.update(op)
-					}
+	case 1:
+		oldPowerConsumption := agent.scheduler.powerConsumption
+		agent.scheduler.TFFCMutation()
+		agent.scheduler.getPowerConsumptionAccountingMigration(scheduler)
+		newPowerConsumption := agent.scheduler.powerConsumption
+		if newPowerConsumption > oldPowerConsumption {
+			agent.tabuList.update(op)
+		}
 
-				case 2:
-					oldPowerConsumption := agent.scheduler.powerConsumption
-					agent.scheduler.TBFCMutation()
-					agent.scheduler.getPowerConsumptionAccountingMigration(scheduler)
-					newPowerConsumption := agent.scheduler.powerConsumption
-					if newPowerConsumption > oldPowerConsumption {
-						agent.tabuList.update(op)
-					}
+	case 2:
+		oldPowerConsumption := agent.scheduler.powerConsumption
+		agent.scheduler.TBFCMutation()
+		agent.scheduler.getPowerConsumptionAccountingMigration(scheduler)
+		newPowerConsumption := agent.scheduler.powerConsumption
+		if newPowerConsumption > oldPowerConsumption {
+			agent.tabuList.update(op)
+		}
 
-				case 3:
-					oldPowerConsumption := agent.scheduler.powerConsumption
-					agent.scheduler.SCMutation()
-					agent.scheduler.getPowerConsumptionAccountingMigration(scheduler)
-					newPowerConsumption := agent.scheduler.powerConsumption
-					if newPowerConsumption > oldPowerConsumption {
-						agent.tabuList.update(op)
-					}
+	case 3:
+		oldPowerConsumption := agent.scheduler.powerConsumption
+		agent.scheduler.SCMutation()
+		agent.scheduler.getPowerConsumptionAccountingMigration(scheduler)
+		newPowerConsumption := agent.scheduler.powerConsumption
+		if newPowerConsumption > oldPowerConsumption {
+			agent.tabuList.update(op)
+		}
 
-				case 4:
-					oldPowerConsumption := agent.scheduler.powerConsumption
-					agent.scheduler.SLRMutation()
-					agent.scheduler.getPowerConsumptionAccountingMigration(scheduler)
-					newPowerConsumption := agent.scheduler.powerConsumption
-					if newPowerConsumption > oldPowerConsumption {
-						agent.tabuList.update(op)
-					}
-				}
+	case 4:
+		oldPowerConsumption := agent.scheduler.powerConsumption
+		agent.scheduler.SLRMutation()
+		agent.scheduler.getPowerConsumptionAccountingMigration(scheduler)
+		newPowerConsumption := agent.scheduler.powerConsumption
+		if newPowerConsumption > oldPowerConsumption {
+			agent.tabuList.update(op)
+		}
+	}
 }
 
 func (scheduler *Scheduler) randomizer() bool {
